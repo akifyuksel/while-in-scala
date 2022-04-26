@@ -1,17 +1,13 @@
-import scala.util.{Failure, Success}
+scala.util.parsing.combinator.JavaTokenParsers
 
 case class NotImplementedException(s: String) extends RuntimeException(s)
 case class ParseException(s: String) extends RuntimeException(s)
 case class DeriveException(s: String) extends RuntimeException(s)
 
-object Reader extends JavaTokenParsers {
-
+// somehow convert string to BExpr, still looking into that
   def read(text: String): BExpr = {
-
-  }
-
-  
 }
+
 //BExpr, or Basic Expression.
 sealed abstract class BExpr
 case class BNum(n: Int) extends BExpr
@@ -35,22 +31,16 @@ case class DWhile(e:DExpr, c:DCommand) extends DExpr//???
 case class DDone() extends DExpr
 
 object Parser {
-  def parse(str: String): DExpr = parse(Reader.read(str))
+  def parse(str: String): DExpr = parse(read(str))
 
   def parse(bexpr: BExpr): DExpr = bexpr match {
-
+    case _ => throw new ParseException("not yet implemented")
   }
 }
 
-object Desugar {
-  def desugar(e: DExpr): DExpr = e match {
-
-  }
-}
-
-object Interp {
-  def interp(e: DExpr): Any = e match {
-
+object Derive {
+  def Derive(e: DExpr): Any = e match {
+    case _ => throw new DeriveException("not yet implemented")
   }
 }
 
