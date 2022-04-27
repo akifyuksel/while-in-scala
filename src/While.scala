@@ -16,9 +16,10 @@ case class BList(list: List[BExpr]) extends BExpr
 
 //DExpr, for Derived Syntax.
 sealed abstract class DExpr
-case class DTrue() extends DExpr
-case class DFalse() extends DExpr
-case class DNum(n: Int) extends DExpr
+//expressions
+case class DTrue() extends DExpr //literal
+case class DFalse() extends DExpr //literal
+case class DNum(n: Int) extends DExpr //literal
 case class DPlus(l: DExpr, r: DExpr) extends DExpr
 case class DLeq(l: DExpr, r: DExpr) extends DExpr
 case class DId(c: String) extends DExpr
@@ -44,23 +45,32 @@ object Step {
     case BList(list) => list match {
       case l :: BStr("+") :: r :: Nil => DPlus(step(l), step(r))
       case l :: BStr("<=") :: r :: Nil => DLeq(step(l), step(r))
-      case l :: BStr(":=") :: r :: Nil => DAssign(step(l), step(r))
+      case l :: BStr(":=") :: r :: Nil => l match {
+        case BStr(x) => DAssign(DId(x), step(r));
+      }
       case BStr("print") :: expr :: Nil => DPrint(step(expr))
-      case BStr("while") :: expr :: BStr("do") :: comm :: BStr("od") :: Nil => DWhile(step(expr), step(comm))
+      case BStr("while") :: expr :: BStr("do") :: comm :: BStr("od") :: Nil => DWhile(step(expr), stepCommand(comm))
       case l :: BStr(";") :: r :: Nil => (l, r) match {
         case (BStr("done"), BStr("done")) => DSeq(DDone(), DDone())
-        case (BStr("done"), BList(r)) => DSeq(DDone(), step(BList(r)))
-        case (BStr("done"), BStr("done"))
+        case (BStr("done"), BList(r)) => DSeq(DDone(), stepCommand(BList(r)))
+        case (BStr("done"), BStr("done")) => DSeq(DDone(), DDone())
+        case (BList(l), BStr("done")) => DSeq(stepCommand(BList(l)), DDone())
+        case _ => throw new StepException("not a valid command sequence")
     }
-      case l :: BStr("<=") :: r :: Nil => DLeq(step(l), step(r))
+      case l :: BStr("") :: r :: Nil => DLeq(step(l), step(r))
       case x => throw new StepException("not yet implemented")
     }
   }
+
+  def stepCommand(bexpr: BExpr): Command = ???
+
 }
 
 object Derive {
   def Derive(e: DExpr): Any = e match {
     case _ => throw new DeriveException("not yet implemented")
   }
+
+  def lookup(x: String): DExpr = ???
 }
 
