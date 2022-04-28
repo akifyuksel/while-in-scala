@@ -32,6 +32,9 @@ case class DPrint(e: DExpr) extends Command
 case class DWhile(e:DExpr, c:Command) extends Command
 case class DDone() extends Command
 
+sealed abstract class Output
+case class NumO(n:Int) extends Output
+case class BoolO(b:Boolean) extends Output
 
 object DExpr {
   val keywords = Set("print", "while", "do", "od", "done", ";", ":=", "+", "<=")
@@ -77,29 +80,38 @@ object Derive {
   case class Assign(id:String, value:DExpr)
   type Store = List[Assign]
 
-  def derive(e: DExpr, st: Store): Any = e match {
-    case DTrue() => true
-    case DFalse() => false
-    case DNum(n) => n
-    case DPlus(l, r) => (derive(l, st), derive(r, st)) match {
-      case (DNum(left), DNum(right)) => left+right
+  def deriveExpr(e: DExpr, st: Store): Output = e match {
+    case DTrue() => BoolO(true)
+    case DFalse() => BoolO(false)
+    case DNum(n) => NumO(n)
+    case DPlus(l, r) => (deriveExpr(l, st), deriveExpr(r, st)) match {
+      case (NumO(left), NumO(right)) => NumO(left + right)
       case x => throw new DeriveException("DPlus failed " + x)
     }
-    case DLeq(l, r) => (derive(l, st), derive(r, st)) match {
-      case (DNum(left), DNum(right)) => left<=right
+    case DLeq(l, r) => (deriveExpr(l, st), deriveExpr(r, st)) match {
+      case (NumO(left), NumO(right)) => BoolO(left<=right)
       case x => throw new DeriveException("DLeq failed " + x)
     }
     case DId(id) => lookup(id, st);
-    case DSeq(c1, c2) => ???
-    case DAssign(id, e) => ???
-    case DPrint(e) => System.out.print(derive(e, st))
-    case DWhile(e, c) => ???
-    case DDone() => ???
+    case x => throw new DeriveException(x + "not yet implemented")
+
+    // not sure how to implement command yet
+//    case DSeq(c1, c2) => ???
+//    case DAssign(DId(id), e) => {
+//      val st1 = Assign(id, e) :: Nil
+//      derive(e, st ::: st1)
+//    }
+//    case DPrint(e) => derive(e, st)
+//    case DWhile(e, c) => ???
+//    case DDone() => ???
+
   }
 
-  def lookup(x: String, st: Store): Any = st match {
+  def lookup(x: String, st: Store): Output = st match {
     case Nil => throw new DeriveException("could not find identifier " + x + " in store")
-    case Assign(id, value) :: st1 => if (x == id) derive(value, st1) else lookup (x, st1)
+    case Assign(id, value) :: st1 => if (x == id) deriveExpr(value, st1) else lookup (x, st1)
   }
+
+  def deriveExpr(e: DExpr): Output = deriveExpr(e, Nil)
 }
 
