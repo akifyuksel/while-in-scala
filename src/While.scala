@@ -1,3 +1,4 @@
+import scala.annotation.tailrec
 //scala.util.parsing.combinator.JavaTokenParsers
 
 class NotImplementedException(s: String) extends RuntimeException(s)
@@ -39,13 +40,13 @@ case class BoolO(b:Boolean) extends Output
 case class NoneO() extends Output
 
 object DExpr {
-  val keywords = Set("print", "while", "do", "od", "done", ";", ":=", "+", "<=")
+  val keywords: Set[String] = Set("print", "while", "do", "od", "done", ";", ":=", "+", "<=")
 }
 
 object Step {
   //  def step(str: String): DExpr = parse(read(str))
 
-  def stepCommand(bexpr: BSyn): Command = bexpr match {
+  def stepCommand(b: BSyn): Command = b match {
     case BStr("done") => DDone()
     case BList(list) => list match {
       case l :: BStr(";") :: r :: Nil => DSeq(stepCommand(l), stepCommand(r))
@@ -58,10 +59,10 @@ object Step {
       }
       case _ => throw new StepException("I don't know what to do with list" + list)
     }
-    case _ => throw new StepException("I don't know what to do with " + bexpr)
+    case _ => throw new StepException("I don't know what to do with " + b)
   }
 
-  def step(bexpr: BSyn): DSyn = bexpr match {
+  def step(b: BSyn): DSyn = b match {
     case BNum(n) => DNum(n)
     case BStr(s) => s match {
       case "true" => DTrue()
@@ -74,7 +75,7 @@ object Step {
       case l :: BStr("<=") :: r :: Nil => DLeq(step(l), step(r))
       case _ => stepCommand(BList(list))
     }
-    case _ => stepCommand(bexpr)
+    case _ => stepCommand(b)
   }
 }
 
@@ -85,17 +86,15 @@ object Derive {
   // not sure how to implement command yet
   def derive(e: DSyn, st: Store): (Command, Output, Store) = e match {
         case DSeq(c1, c2) => derive(c1, st) match {
-          case (DDone(), out, st1) => derive(c2, st1)
+          case (DDone(), _, st1) => derive(c2, st1)
           case x => throw new DeriveException("DSeq failed on " + x)
         }
-        case DAssign(DId(id), e) => {
+        case DAssign(DId(id), e) =>
           val res = deriveExpr(e, st)
           val st1 = Assign(id, res._1) :: st
           (DDone(), res._1, st1)
-        }
-        case DPrint(e) => {
+        case DPrint(e) =>
           (DDone(), deriveExpr(e, st)._1, st)
-        }
         case DWhile(e, c) => deriveExpr(e, st) match {
           case (BoolO(true), st1) =>
             val res = derive(c, st1)
@@ -124,6 +123,7 @@ object Derive {
     case x => throw new DeriveException(x + " expr invalid")
   }
 
+  @tailrec
   def lookup(x: String, st: Store): Output = st match {
     case Nil => throw new DeriveException("could not find identifier " + x + " in store")
     case Assign(id, value) :: st1 => if (x == id) value else lookup (x, st1)
