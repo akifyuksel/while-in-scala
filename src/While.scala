@@ -90,7 +90,7 @@ object Derive {
         }
         case DAssign(DId(id), e) => {
           val res = deriveExpr(e, st)
-          val st1 = st ::: Assign(id, res._1) :: Nil
+          val st1 = Assign(id, res._1) :: st
           (DDone(), res._1, st1)
         }
         case DPrint(e) => {
