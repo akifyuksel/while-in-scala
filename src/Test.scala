@@ -6,9 +6,9 @@ import org.scalatest.FunSuite
 
 class Test extends FunSuite {
   // 5
-  test("derive 5") {
-    assertResult(NumO(5)) {
-      deriveExpr(step(BNum(5)))._1
+  test("derive 5 fail") {
+    intercept[StepException] {
+      derive(step(BNum(5)))
     }
   }
 
