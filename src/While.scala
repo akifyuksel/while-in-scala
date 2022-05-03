@@ -1,5 +1,3 @@
-import Derive.Store
-
 import scala.annotation.tailrec
 //scala.util.parsing.combinator.JavaTokenParsers
 
@@ -83,18 +81,28 @@ object Derive {
   case class Assign(id:String, value:Output)
   type Store = List[Assign]
 
-  def deriveSmall(c1: Comm, st: Store): (Comm, Output, Store) = c1 match {
+  def deriveSmall(c: Comm, st: Store): (Comm, Output, Store) = c match {
     case DSeq(c1, c2) => deriveSmall(c1, st) match {
       case (c1_prime, out, st1) => (DSeq(c1_prime, c2), out, st1)
       case (DDone(), out, st1) => (c2, out, st1)
       case x => throw new DeriveException("DSeq failed on " + x)
     }
-    case DWhile(e, c) => deriveExpr(e, st) match {
-      case (BoolO(true), st1) =>
-        deriveSmall(c, st1)
+    case DWhile(e, c1) => deriveExpr(e, st) match {
+      case (BoolO(true), st1) => deriveSmall(c1, st1) match {
+        case (DDone(), out, st2) => (DWhile(e, c1), out, st2)
+        case x => throw new DeriveException("??? dwhile, " + x)
+      }
       case (BoolO(false), st1) => (DDone(), NoneO(), st1) // not sure about this one
       case x => throw new DeriveException("invalid while condition, " + x + " is not a bool")
     }
+    case DAssign(DId(id), e) =>
+      val res = deriveExpr(e, st)
+      val st1 = Assign(id, res._1) :: st
+      (DDone(), res._1, st1)
+    case DPrint(e) =>
+      (DDone(), deriveExpr(e, st)._1, st)
+    case DDone() => (DDone(), NoneO(), st) // not sure about this one either
+    case x => throw new DeriveException(x + " command invalid")
   }
 
   // not sure how to implement command yet
@@ -145,4 +153,5 @@ object Derive {
 
   def deriveExpr(e: DExpr): (Output, Store) = deriveExpr(e, Nil)
   def derive(c: Comm): (Comm, Output, Store) = derive(c, Nil)
+  def deriveSmall(c: Comm): (Comm, Output, Store) = deriveSmall(c, Nil)
 }
