@@ -29,6 +29,7 @@ case class DSeq(c1:Comm, c2:Comm) extends Comm
 case class DAssign(id:DId, e:DExpr) extends Comm
 case class DPrint(e: DExpr) extends Comm
 case class DWhile(e:DExpr, c:Comm) extends Comm
+//case class DWhileInternal(e1: DExpr, e2: Output, c1: Comm) extends Comm
 case class DDone() extends Comm
 
 // final result, L*
@@ -81,6 +82,7 @@ object Derive {
   case class Assign(id:String, value:Output)
   type Store = List[Assign]
 
+  // ONE STEP AT A TIME
   def deriveSmall(c: Comm, st: Store): (Comm, Output, Store) = c match {
     case DSeq(c1, c2) => deriveSmall(c1, st) match {
       case (c1_prime, out, st1) => (DSeq(c1_prime, c2), out, st1)
@@ -95,6 +97,14 @@ object Derive {
       case (BoolO(false), st1) => (DDone(), NoneO(), st1) // not sure about this one
       case x => throw new DeriveException("invalid while condition, " + x + " is not a bool")
     }
+//    case DWhileInternal(e1, e2, c1) => deriveExpr(e1, st) match {
+//      case (e1_prime, st1) => if (e1_prime == e2) deriveSmall(c1, st1) match {
+//        case (DDone(), out, st2) => (DWhile(e, c1), out, st2)
+//        case x => throw new DeriveException("??? dwhile, " + x)
+//      }
+//      case (BoolO(false), st1) => (DDone(), NoneO(), st1) // not sure about this one
+//      case x => throw new DeriveException("invalid while condition, " + x + " is not a bool")
+//    }
     case DAssign(DId(id), e) =>
       val res = deriveExpr(e, st)
       val st1 = Assign(id, res._1) :: st
@@ -105,7 +115,7 @@ object Derive {
     case x => throw new DeriveException(x + " command invalid")
   }
 
-  // not sure how to implement command yet
+  // BIG STEP
   def derive(c: Comm, st: Store): (Comm, Output, Store) = c match {
     case DSeq(c1, c2) => derive(c1, st) match {
           case (DDone(), _, st1) => derive(c2, st1)
